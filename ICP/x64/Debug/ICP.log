@@ -1,0 +1,3 @@
+﻿  ICP.cpp
+D:\Git\ICP\ICP\ICP.cpp(18,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  ICP.vcxproj -> D:\Git\ICP\x64\Debug\ICP.exe

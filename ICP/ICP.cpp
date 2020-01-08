@@ -1,15 +1,20 @@
-// Eigen.cpp : This file contains the 'main' function. Program execution begins and ends there.
+// ICP.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 #include <iostream>
 #include <Eigen/Dense>
 #include <opencv2\opencv.hpp>
 #include <vector>
+#include <chrono>
+#include <random>
 
 using Eigen::Vector3d;
 using Eigen::RowVector3d;
+using std::chrono::high_resolution_clock;
 
 void solve(std::vector<Vector3d>& p, std::vector<Vector3d>& p_) {
+
+	auto start = high_resolution_clock::now();
 
 	int count = p.size();
 	// 1. centroid 1 & 2
@@ -87,6 +92,10 @@ void solve(std::vector<Vector3d>& p, std::vector<Vector3d>& p_) {
 		}
 	}
 
+	auto finish = high_resolution_clock::now();
+
+	std::chrono::duration<double, std::milli> dur = finish - start;
+
 	std::cout << "This is W:" << std::endl << W << std::endl << std::endl;
 	std::cout << "After doing SVD on the matrix, we obtained U, V and sigma." << std::endl << std::endl;
 	std::cout << "U is:" << std::endl << U << std::endl << std::endl;
@@ -95,21 +104,48 @@ void solve(std::vector<Vector3d>& p, std::vector<Vector3d>& p_) {
 
 	std::cout << "We then obtain R and t." << std::endl << std::endl;
 	std::cout << "R:" << std::endl << R << std::endl << std::endl;
-	std::cout << "t:" << std::endl << t << std::endl << std::endl;
+	std::cout << "t:" << std::endl << t << std::endl << std::endl << std::endl;
 
+	std::cout << "The time taken to compute is: " << dur.count() << std::endl;
 }
 
-std::vector<Vector3d> genpts() {
-	std::vector<Vector3d> set;
-	int x, y, z;
-	Vector3d point;
+std::vector<Vector3d> genpts(std::default_random_engine gen, std::normal_distribution<double> range) {
+
+	std::vector<Vector3d> set;    // set of points
+	Vector3d point;              // a point
+	
 	for (int i = 0; i < 1000; i++) {
-		x = rand() % 20;
-		y = rand() % 20;
-		z = rand() % 20;
-		point << x, y, z;
-		set.push_back(point);
+		point << range(gen), range(gen), range(gen);       // range to gen, gives coords to a point
+		set.push_back(point);                             // push to set-point
 	}
+	return set;
+}
+
+std::vector<Vector3d> refpts(std::vector<Vector3d> original, std::default_random_engine gen, std::normal_distribution<double> range) {
+	
+	std::vector<Vector3d> set;        // set of points
+	Eigen::VectorXd groundtruth(7);   // rotation + translation
+	groundtruth << 15, -15, 5, 0.25774, 0.448701, 0.460485, 0.721243; // 1-3: translation, 4-7: rotation
+
+	std::normal_distribution<double> noise(0.,0.2);	
+
+	// the usual
+	Vector3d point;
+	Vector3d noiseV;   // noise
+	Vector3d translation;  // translation matrix
+	translation << groundtruth[0], groundtruth[1], groundtruth[2];
+	Vector3d rotation;
+	rotation << groundtruth[6], groundtruth[3], groundtruth[4], groundtruth[5];
+
+	for (int i = 0; i < set.size(); i++) {
+		
+		point << range(gen), range(gen), range(gen);        // a point
+		noiseV << range(gen), range(gen), range(gen);       // noise
+
+
+		point = (rotation * point + translation + noiseV);  // final point
+	}
+
 	return set;
 }
 
@@ -136,10 +172,16 @@ int main()
 	pt4 << 1, -1, 1;
 	p_.push_back(pt4);
 
-	solve(p, p_); */
+	solve(p, p_); 
+	*/
 
-	std::vector<Vector3d> r = genpts();
-	std::vector<Vector3d> r_ = genpts();
+	double rad = 10.0;
+	std::default_random_engine gen;                    //object for random generation
+	std::normal_distribution<double> range(0., rad);   // defines range of generation
 
+
+	std::vector<Vector3d> r = genpts(gen, range);
+	std::vector<Vector3d> r_ = refpts(r, gen, range);
+	
 	solve(r, r_);
 }
