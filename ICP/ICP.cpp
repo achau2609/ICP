@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <Eigen/Dense>
+#include <Eigen/Geometry>
 #include <opencv2\opencv.hpp>
 #include <vector>
 #include <chrono>
@@ -131,19 +132,21 @@ std::vector<Vector3d> refpts(std::vector<Vector3d> original, std::default_random
 
 	// the usual
 	Vector3d point;
+	Vector3d pointP;
 	Vector3d noiseV;   // noise
 	Vector3d translation;  // translation matrix
 	translation << groundtruth[0], groundtruth[1], groundtruth[2];
-	Vector3d rotation;
-	rotation << groundtruth[6], groundtruth[3], groundtruth[4], groundtruth[5];
+	Eigen::Quaterniond rotation(groundtruth[6], groundtruth[3], groundtruth[4], groundtruth[5]);
+	rotation.normalize();
+	rotation.toRotationMatrix();
 
-	for (int i = 0; i < set.size(); i++) {
+	for (int i = 0; i < 1000; i++) {
 		
 		point << range(gen), range(gen), range(gen);        // a point
 		noiseV << range(gen), range(gen), range(gen);       // noise
 
-
-		point = (rotation * point + translation + noiseV);  // final point
+		pointP << (rotation * point + translation + noiseV);  // final point
+		set.push_back(pointP);                                // point of a set
 	}
 
 	return set;

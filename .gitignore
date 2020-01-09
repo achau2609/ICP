@@ -1,2 +1,3 @@
 *.opendb
 *.ipch
+.vs\ICP\v16\Browse.VC.db
