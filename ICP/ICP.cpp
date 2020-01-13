@@ -24,9 +24,12 @@ void solve(std::vector<Vector3d>& p, std::vector<Vector3d>& p_) {
 
 	for (int i = 0; i < count; i++) {
 		pc << pc + p[i];
+		//std::cout << pc << std::endl << std::endl;
 	}
+
 	for (int i = 0; i < count; i++) {
-		pc_ << pc_ + p[i];
+		pc_ << pc_ + p_[i];
+		//std::cout << pc_ << std::endl << std::endl;
 	}
 
 	// divide for centroid
@@ -44,6 +47,14 @@ void solve(std::vector<Vector3d>& p, std::vector<Vector3d>& p_) {
 		q_.push_back(p_[i] - pc_);
 	}
 
+	/*
+	std::cout << p[1] << std::endl << std::endl;
+	std::cout << q[1] << std::endl << std::endl;
+	//std::cout << q[count-1] << std::endl << std::endl;
+	std::cout << p_[1] << std::endl << std::endl;
+	std::cout << q_[1] << std::endl << std::endl;
+	//std::cout << q_[count-1] << std::endl << std::endl;
+	*/
 	// 2. define W = sum(q * q_ transpose)
 	// q_ transpose
 	std::vector<RowVector3d> q_t;
@@ -78,12 +89,17 @@ void solve(std::vector<Vector3d>& p, std::vector<Vector3d>& p_) {
 
 	// Value of R
 	Eigen::Matrix3d R;
-	R << U * V.transpose();
+	R << U * (V.transpose());
+
+	Eigen::Matrix3d R_trans;
+	R_trans << R.transpose();
 
 	// 4. find t
-	Eigen::MatrixXd t;
-	t = pc - (R * pc_);
+	Eigen::Vector3d t, tmp;
+	tmp = pc - (R * pc_);
+	t = - R_trans * tmp;
 
+	// reconstruction singular values into sigma diagonal matrix
 	Eigen::Matrix3d sigmaRecons = Eigen::Matrix3d::Zero();
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
@@ -97,15 +113,18 @@ void solve(std::vector<Vector3d>& p, std::vector<Vector3d>& p_) {
 
 	std::chrono::duration<double, std::milli> dur = finish - start;
 
+	
 	std::cout << "This is W:" << std::endl << W << std::endl << std::endl;
 	std::cout << "After doing SVD on the matrix, we obtained U, V and sigma." << std::endl << std::endl;
 	std::cout << "U is:" << std::endl << U << std::endl << std::endl;
 	std::cout << "V is:" << std::endl << V << std::endl << std::endl;
 	std::cout << "Sigma is:" << std::endl << sigmaRecons << std::endl << std::endl;
-
-	std::cout << "We then obtain R and t." << std::endl << std::endl;
-	std::cout << "R:" << std::endl << R << std::endl << std::endl;
-	std::cout << "t:" << std::endl << t << std::endl << std::endl << std::endl;
+	std::cout << "-------------------------------------------------------------" << std::endl << std::endl;
+	
+	std::cout << "We then obtain R and t that was obtained with ICP calculation, but with noise added." << std::endl << std::endl;
+	std::cout << "R:" << std::endl << R_trans << std::endl << std::endl;
+	std::cout << "t:" << std::endl << t << std::endl << std::endl;
+	std::cout << "-------------------------------------------------------------" << std::endl << std::endl;
 
 	std::cout << "The time taken to compute is: " << dur.count() << std::endl;
 }
@@ -126,26 +145,39 @@ std::vector<Vector3d> refpts(std::vector<Vector3d> original, std::default_random
 	
 	std::vector<Vector3d> set;        // set of points
 	Eigen::VectorXd groundtruth(7);   // rotation + translation
-	groundtruth << 15, -15, 5, 0.25774, 0.448701, 0.460485, 0.721243; // 1-3: translation, 4-7: rotation
+	groundtruth << 1, 1, 8, cos(45), sin(45), cos(30), 1; // 1-3: translation, 4-7: rotation; testing set for rotation and translation values
 
-	std::normal_distribution<double> noise(0.,0.2);	
+	std::normal_distribution<double> noise(0.,0.002);	
+	Vector3d noiseV;   // noise
 
 	// the usual
 	Vector3d point;
 	Vector3d pointP;
-	Vector3d noiseV;   // noise
+	
 	Vector3d translation;  // translation matrix
 	translation << groundtruth[0], groundtruth[1], groundtruth[2];
+
+	// Quaternion for rotation
 	Eigen::Quaterniond rotation(groundtruth[6], groundtruth[3], groundtruth[4], groundtruth[5]);
 	rotation.normalize();
-	rotation.toRotationMatrix();
+	Eigen::Matrix3d rotateScalar; // storing the rotation matrix to make life easier
+	rotateScalar << rotation.toRotationMatrix();
 
+	// checking values with output
+	std::cout << "Ground truth: " << std::endl << std::endl;
+	std::cout << "Translation is: " << std::endl;
+	std::cout << translation << std::endl << std::endl;
+	std::cout << "Rotation matrix: " << std::endl;
+	std::cout << rotateScalar << std::endl << std::endl;
+	std::cout << "-------------------------------------------------------------" << std::endl << std::endl;
+
+	// the other set of points
 	for (int i = 0; i < 1000; i++) {
 		
-		point << range(gen), range(gen), range(gen);        // a point
-		noiseV << range(gen), range(gen), range(gen);       // noise
+		point << original[i];        // a point
+		noiseV << noise(gen), noise(gen), noise(gen);       // noise
 
-		pointP << (rotation * point + translation + noiseV);  // final point
+		pointP << (rotateScalar * point + translation + noiseV);  // final point
 		set.push_back(pointP);                                // point of a set
 	}
 
@@ -177,6 +209,7 @@ int main()
 
 	solve(p, p_); 
 	*/
+
 
 	double rad = 10.0;
 	std::default_random_engine gen;                    //object for random generation
