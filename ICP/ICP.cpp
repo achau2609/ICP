@@ -47,14 +47,6 @@ void solve(std::vector<Vector3d>& p, std::vector<Vector3d>& p_) {
 		q_.push_back(p_[i] - pc_);
 	}
 
-	/*
-	std::cout << p[1] << std::endl << std::endl;
-	std::cout << q[1] << std::endl << std::endl;
-	//std::cout << q[count-1] << std::endl << std::endl;
-	std::cout << p_[1] << std::endl << std::endl;
-	std::cout << q_[1] << std::endl << std::endl;
-	//std::cout << q_[count-1] << std::endl << std::endl;
-	*/
 	// 2. define W = sum(q * q_ transpose)
 	// q_ transpose
 	std::vector<RowVector3d> q_t;
